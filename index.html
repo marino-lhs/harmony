@@ -262,7 +262,7 @@ footer{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-cont
       <div class="score"><span class="big" id="sBig"></span><span class="sm" id="sSop"></span><span class="sm" id="sBass"></span><span class="sm" id="sRn"></span></div>
       <div class="legend"><span><i style="background:var(--ok)"></i>Right</span><span><i style="background:var(--bad)"></i>Wrong</span><span><i style="background:var(--rev)"></i>Alto and tenor</span></div>
       <ul class="notes-list" id="sNotes"></ul>
-      <div class="actions"><button class="btn" id="playAns">Play answer</button></div>
+      <div class="actions"><button class="btn" id="shareBtn">Share score</button></div>
     </div>
   </section>
 
@@ -271,7 +271,7 @@ footer{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-cont
     <p>Keys: <kbd>↑</kbd> <kbd>↓</kbd> move the selected note. <kbd>←</kbd> <kbd>→</kbd> go to the previous or next chord. <kbd>Tab</kbd> switches between soprano, bass and numeral. <kbd>1</kbd>–<kbd>7</kbd> pick a numeral. <kbd>-</kbd> <kbd>n</kbd> <kbd>=</kbd> set flat, natural or sharp. <kbd>Backspace</kbd> deletes.</p>
   </div>
 
-  <footer><span id="stats">This session: no progressions checked yet.</span><button class="btn" id="shareBtn" disabled>Share score</button></footer>
+  <footer><span id="stats">This session: no progressions checked yet.</span></footer>
 </div>
 
 <dialog class="report" id="report" aria-labelledby="reportTitle">
@@ -919,8 +919,8 @@ function renderTools() {
   $('#meta').textContent = `${S.prog.chords.length} chords · ${S.prog.meas} bars`;
   const ap = S.set.mode === 'ap', ph = S.ap.phase, n = S.prog.chords.length;
   $('#plays').textContent = ap ? '' : S.plays === 1 ? '1 play' : `${S.plays} plays`;
-  $('#playProg span').textContent = ap ? (ph === 'ready' ? 'Start' : ph === 'done' ? 'Finished' : 'Running') : (nowPlaying === 'prog' ? 'Stop' : 'Play progression');
-  $('#playProg').disabled = ap && ph !== 'ready';
+  $('#playProg span').textContent = ap && ph !== 'done' ? (ph === 'ready' ? 'Start' : 'Running') : (nowPlaying === 'prog' ? 'Stop' : 'Play progression');
+  $('#playProg').disabled = ap && (ph === 'playing' || ph === 'wait');
   $('#hearKey').disabled = ap && (ph === 'playing' || ph === 'wait');
   $('#playMine').hidden = S.set.mode !== 'practice' && !S.checked;
   const locked = !!S.checked;
@@ -1173,9 +1173,8 @@ function tone(bus, t, midi, dur, vol = 0.2) {
 }
 function at(sec, fn) { timers.push(setTimeout(fn, Math.max(0, sec * 1000))); }
 function setPlayLabels() {
-  if (S.set.mode !== 'ap') $('#playProg span').textContent = nowPlaying === 'prog' ? 'Stop' : 'Play progression';
+  if (S.set.mode !== 'ap' || S.ap.phase === 'done') $('#playProg span').textContent = nowPlaying === 'prog' ? 'Stop' : 'Play progression';
   $('#playMine').textContent = nowPlaying === 'mine' ? 'Stop' : 'Play my answer';
-  $('#playAns').textContent = nowPlaying === 'ans' ? 'Stop' : 'Play answer';
 }
 // list: per chord, the MIDI notes to sound, lowest first
 function playChords(list, which, onDone) {
@@ -1193,11 +1192,10 @@ function playChords(list, which, onDone) {
 }
 const withSound = fn => () => { ac(); if (nowPlaying) { fn(); return; } ensureSound().then(fn); };
 $('#playProg').onclick = withSound(() => {
-  if (S.set.mode === 'ap') { if (S.ap.phase === 'ready') apPlay(); return; }
+  if (S.set.mode === 'ap' && S.ap.phase !== 'done') { if (S.ap.phase === 'ready') apPlay(); return; }
   if (nowPlaying !== 'prog') { S.plays++; renderTools(); }
   playChords(S.prog.midi, 'prog');
 });
-$('#playAns').onclick = withSound(() => playChords(S.prog.midi, 'ans'));
 $('#playMine').onclick = withSound(() => {
   if (S.ans.slice(1).every(a => !a.S && !a.B)) { setStatus('Add some notes first.', true); return; }
   const list = S.prog.chords.map((c, i) => i === 0 ? S.prog.midi[0] : ['B', 'S'].map(k => S.ans[i][k]).filter(Boolean).map(a => midiOf(a.D, a.alt)));
