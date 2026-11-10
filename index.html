@@ -104,13 +104,57 @@ g.ghost{color:var(--accent);opacity:.45;pointer-events:none}
 .how{color:var(--muted);font-size:.92rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px 28px}
 .how p{margin:0;max-width:65ch}
 kbd{font:600 .8rem var(--body);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--ink);background:var(--surface)}
-footer{color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 20px}
+.modes{display:flex;border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px;background:var(--surface)}
+.md{border:0;background:transparent;border-radius:7px;padding:7px 16px;font-weight:700;color:var(--muted)}
+.md:hover{color:var(--ink)}
+.md[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.modedesc{margin:-8px 0 0;color:var(--muted);font-size:.92rem;max-width:90ch}
+.apbar{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--accent-soft)}
+.aprounds{display:flex;gap:5px}
+.aprounds i{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--accent)}
+.aprounds i.done{background:var(--accent)}
+.aprounds i.now{background:var(--accent);box-shadow:0 0 0 3px var(--surface),0 0 0 4.5px var(--accent)}
+.apphase{font-weight:700}
+.apmeter{flex:1;min-width:120px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.apmeter i{display:block;height:100%;background:var(--accent);transition:width .2s linear}
+.aptime{font-family:var(--display);font-weight:700;font-size:1.5rem;font-variant-numeric:tabular-nums;min-width:3ch;text-align:right}
+.apbar.low .apmeter i{background:var(--bad)} .apbar.low .aptime{color:var(--bad)}
+footer{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
+.report{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);padding:20px;width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 32px)}
+.report::backdrop{background:rgba(10,14,22,.55)}
+.report-card{display:flex;flex-direction:column;gap:12px}
+.report h2{font-family:var(--display);font-size:1.4rem;margin:0}
+.report-sub{color:var(--muted);font-size:.92rem;margin:2px 0 0}
+.namefld{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted);margin-bottom:14px}
+.namefld input{font:inherit;font-size:1rem;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-width:320px}
+.tablewrap{overflow-x:auto}
+.report table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.92rem}
+.report th,.report td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.report th{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.report td.num,.report th.num{text-align:right}
+.report-more{color:var(--muted);font-size:.88rem;margin:0}
+.report-totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:0}
+.report-totals div{background:var(--accent-soft);border-radius:8px;padding:10px 12px}
+.report-totals dt{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.report-totals dd{margin:2px 0 0;font-family:var(--display);font-size:1.35rem;font-weight:700;font-variant-numeric:tabular-nums}
+.report-note{margin:14px 0 0;font-weight:700}
+.report-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:14px;flex-wrap:wrap}
+.report-msg{margin:10px 0 0;color:var(--muted);font-size:.9rem}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Harmonic Dictation</h1>
+  <header>
+    <h1>Harmonic Dictation</h1>
+    <div class="modes" role="group" aria-label="Mode" id="modes">
+      <button class="md" data-mode="practice" aria-pressed="true">Practice</button>
+      <button class="md" data-mode="challenge" aria-pressed="false">Challenge</button>
+      <button class="md" data-mode="ap" aria-pressed="false">AP</button>
+    </div>
+  </header>
+  <p class="modedesc" id="modeDesc"></p>
 
   <details class="setup" id="setup" open>
     <summary><b>Settings</b><span id="sumLine"></span></summary>
@@ -171,6 +215,13 @@ footer{color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
       <span class="meta" id="plays">0 plays</span>
     </div>
 
+    <div class="apbar" id="apBar" hidden>
+      <div class="aprounds" id="apRounds" aria-hidden="true"></div>
+      <span class="apphase" id="apPhase">Ready</span>
+      <div class="apmeter"><i id="apFill"></i></div>
+      <span class="aptime" id="apTime">0:30</span>
+    </div>
+
     <div class="staffbox"><svg id="entry" viewBox="0 0 880 336" role="img" aria-label="Grand staff. Click the treble staff for soprano, the bass staff for bass." tabindex="0"></svg></div>
 
     <div class="tools">
@@ -220,8 +271,19 @@ footer{color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
     <p>Keys: <kbd>↑</kbd> <kbd>↓</kbd> move the selected note. <kbd>←</kbd> <kbd>→</kbd> go to the previous or next chord. <kbd>Tab</kbd> switches between soprano, bass and numeral. <kbd>1</kbd>–<kbd>7</kbd> pick a numeral. <kbd>-</kbd> <kbd>n</kbd> <kbd>=</kbd> set flat, natural or sharp. <kbd>Backspace</kbd> deletes.</p>
   </div>
 
-  <footer id="stats">This session: no progressions checked yet.</footer>
+  <footer><span id="stats">This session: no progressions checked yet.</span><button class="btn" id="shareBtn" disabled>Share score</button></footer>
 </div>
+
+<dialog class="report" id="report" aria-labelledby="reportTitle">
+  <label class="namefld">Your name<input id="stuName" type="text" maxlength="40" autocomplete="name"></label>
+  <div class="report-card" id="reportCard"></div>
+  <p class="report-note">Save the image or take a screenshot, then send it to your teacher.</p>
+  <div class="report-actions">
+    <button class="btn" id="closeReport">Close</button>
+    <button class="btn primary" id="saveImage">Save image</button>
+  </div>
+  <p class="report-msg" id="saveMsg" hidden></p>
+</dialog>
 
 <script>
 const G = {"gClef": {"d": "M524 363C557 363 595 360 624 354C639 351 642 350 645 367C662 464 684 589 684 657C684 870 540 896 455 896C377 896 340 873 340 854C340 844 353 840 386 829C431 816 482 778 482 694C482 615 432 547 344 547C248 547 190 624 190 713C190 806 246 948 464 948C560 948 747 904 747 660C747 577 721 441 706 351C703 334 704 336 724 327C870 269 966 147 966 -16C966 -200 831 -363 619 -363C582 -363 582 -363 577 -389L541 -598C539 -615 541 -616 550 -625C706 -770 824 -953 824 -1174C824 -1299 789 -1423 730 -1509C708 -1541 671 -1581 655 -1581C635 -1581 590 -1544 562 -1512C455 -1394 420 -1214 420 -1064C420 -981 431 -887 441 -828C444 -811 445 -808 428 -793C220 -622 0 -416 0 -125C0 125 171 363 524 363ZM115 -29C115 -114 130 -228 249 -363C336 -459 402 -513 469 -567C484 -579 487 -577 490 -562L520 -377C524 -350 524 -351 498 -343C372 -300 289 -186 289 -63C289 66 357 158 455 192C467 196 484 200 494 200C505 200 511 193 511 184C511 174 500 170 490 166C429 140 386 78 386 12C386 -71 442 -132 530 -157C553 -163 556 -161 559 -145L631 284C634 300 632 300 611 304C588 308 559 311 530 311C278 311 115 171 115 -29ZM677 -1358C724 -1358 763 -1319 763 -1240C763 -1080 626 -950 513 -851C503 -842 497 -844 494 -863C488 -900 485 -949 485 -995C485 -1220 589 -1358 677 -1358ZM635 -168C752 -158 848 -60 848 66C848 157 793 230 713 271C696 279 693 279 690 262L619 -148C616 -166 618 -170 635 -168Z", "x_min": 0, "x_max": 671}, "cClef": {"d": "M269 694C269 714 279 724 300 724L301 724C321 724 331 714 331 694L331 63C331 52 338 53 344 55C382 65 442 102 472 265C477 288 485 301 500 301C516 301 523 287 530 262C549 199 582 128 684 128C778 128 804 220 804 409C804 598 770 683 651 683C631 683 528 674 528 644C528 636 552 628 567 622C596 612 625 583 625 528C625 465 583 429 527 429C465 429 416 471 416 547C416 638 495 729 667 729C903 729 1007 563 1007 413C1007 215 897 76 706 76C664 76 636 84 618 89C603 94 589 96 576 88C556 75 524 29 524 0C524 -29 556 -75 576 -88C589 -96 603 -94 618 -89C636 -84 664 -76 706 -76C897 -76 1007 -215 1007 -413C1007 -563 903 -729 667 -729C495 -729 416 -638 416 -547C416 -471 465 -429 527 -429C583 -429 625 -465 625 -528C625 -583 596 -612 567 -622C552 -628 528 -636 528 -644C528 -674 631 -683 651 -683C770 -683 804 -598 804 -409C804 -220 778 -128 684 -128C582 -128 549 -199 530 -262C523 -287 516 -301 500 -301C485 -301 477 -288 472 -265C442 -102 382 -65 344 -55C338 -53 331 -52 331 -63L331 -694C331 -714 321 -724 301 -724L300 -724C279 -724 269 -714 269 -694ZM30 724L154 724C174 724 184 714 184 694L184 -694C184 -714 174 -724 154 -724L30 -724C10 -724 0 -714 0 -694L0 694C0 714 10 724 30 724Z", "x_min": 0, "x_max": 699}, "fClef": {"d": "M12 914C19 914 27 912 36 907C390 734 765 478 765 40C765 -210 612 -377 363 -377C112 -377 0 -194 0 -56C0 59 60 158 177 158C268 158 330 95 330 6C330 -86 262 -144 192 -144C153 -144 138 -134 120 -134C101 -134 96 -145 96 -160C96 -217 183 -323 330 -323C482 -323 549 -173 549 53C549 455 350 680 14 871C1 878 -7 886 -7 897C-7 906 -1 914 12 914ZM906 -101C950 -101 985 -135 985 -180C985 -225 950 -259 906 -259C861 -259 827 -225 827 -180C827 -135 861 -101 906 -101ZM907 258C952 258 985 225 985 180C985 135 952 102 907 102C863 102 829 135 829 180C829 225 863 258 907 258Z", "x_min": -5, "x_max": 684}, "accidentalSharp": {"d": "M12 -37C17 -37 45 -50 49 -53C50 -53 52 -55 53 -55C63 -55 72 -40 72 -29L72 114C72 130 65 143 56 147C48 150 17 163 17 163C7 166 0 177 0 186L0 288C0 297 4 301 12 301C13 301 16 300 17 300C17 300 37 291 50 287C52 285 53 285 55 285C65 285 72 301 72 308L72 485C72 494 81 501 91 501C105 501 115 494 115 485L115 285C115 266 122 256 130 253L217 217C219 217 222 216 223 216C235 216 242 233 242 242L242 422C242 431 251 438 261 438C276 438 285 431 285 422L285 217C285 206 291 189 301 184C311 180 341 168 341 168C351 164 359 153 359 144L359 42C359 35 354 30 348 30C346 30 344 30 341 32L304 46C295 46 285 37 285 20L285 -114C285 -124 292 -151 304 -156L341 -170C351 -174 359 -186 359 -194L359 -297C359 -304 354 -308 348 -308C346 -308 344 -308 341 -307C341 -307 312 -295 305 -294C295 -294 285 -301 285 -312L285 -488C285 -497 276 -504 265 -504C251 -504 242 -497 242 -488L242 -301C240 -287 236 -268 223 -259C206 -249 157 -229 132 -223C120 -223 115 -240 115 -252L115 -425C115 -433 105 -441 95 -441C81 -441 72 -433 72 -425L72 -230C72 -210 63 -196 55 -192C46 -187 17 -176 17 -176C7 -173 0 -161 0 -153L0 -50C0 -42 4 -37 12 -37ZM111 43C111 -1 112 -52 115 -63C118 -88 184 -118 220 -118C230 -118 239 -115 242 -109C245 -102 248 -66 248 -27C248 12 245 52 242 65C233 94 166 122 132 122C124 122 117 120 115 115C112 109 111 78 111 43Z", "x_min": 0, "x_max": 249}, "accidentalFlat": {"d": "M17 245C22 251 26 252 30 252C35 252 39 249 39 249C82 225 117 186 153 161C281 72 325 -16 325 -82C325 -164 262 -216 196 -220C171 -220 137 -209 117 -196C108 -189 92 -176 85 -176C82 -176 81 -176 78 -177C68 -181 62 -192 62 -202C63 -233 72 -579 72 -608C72 -624 59 -632 45 -632C24 -632 1 -618 0 -592C0 -592 6 230 17 245ZM66 -73C76 -102 134 -144 167 -144C209 -144 226 -96 226 -60C226 17 160 95 98 134C92 137 88 138 84 138C71 138 68 124 68 117C68 117 63 30 63 -27C63 -50 65 -68 66 -73Z", "x_min": 0, "x_max": 226}, "accidentalNatural": {"d": "M0 268C0 276 4 281 12 281C13 281 20 279 22 278C42 269 122 235 164 235C179 235 189 239 189 251L189 465C189 475 196 482 206 482L225 482C233 482 242 475 242 465L242 -258C242 -265 236 -269 230 -269C229 -269 226 -269 225 -268L203 -261C200 -261 199 -259 197 -259C197 -259 105 -226 68 -226C59 -226 53 -228 53 -233L53 -474C53 -484 45 -491 36 -491L17 -491C7 -491 0 -484 0 -474ZM176 -114C184 -114 189 -112 189 -107L189 42C189 68 107 101 71 101C60 101 53 98 53 92L53 -56C53 -76 141 -114 176 -114Z", "x_min": 0, "x_max": 168}, "noteheadBlack": {"d": "M0 60C0 135 62 180 140 180C268 180 425 62 425 -60C425 -134 367 -180 285 -180C127 -180 0 -63 0 60Z", "x_min": 0, "x_max": 295}, "noteheadHalf": {"d": "M140 180C377 180 425 -13 425 -60C425 -134 366 -180 282 -180C68 -180 0 -14 0 60C0 137 60 180 140 180ZM42 63C42 -7 251 -121 318 -121C346 -121 361 -108 372 -91C376 -82 380 -73 380 -63C380 -1 177 125 108 125C78 125 60 109 50 92C46 84 42 73 42 63Z", "x_min": 0, "x_max": 295}, "flag8thUp": {"d": "M284 688C305 737 318 819 318 904C318 969 308 1037 284 1102C281 1110 279 1117 279 1123C279 1146 294 1159 302 1165C311 1171 336 1162 343 1138C343 1138 380 1001 380 888C380 708 305 539 215 395C141 281 81 157 58 19C53 -4 42 -13 14 -13C6 -13 0 -9 0 9L0 353C95 370 232 566 284 688Z", "x_min": 0, "x_max": 264}, "flag8thDown": {"d": "M16 20C43 20 55 12 58 -12C82 -148 189 -274 262 -387C353 -530 441 -701 441 -881C441 -994 412 -1096 400 -1142C396 -1158 387 -1164 377 -1164C356 -1164 331 -1136 346 -1094C366 -1034 376 -962 376 -897C376 -812 340 -691 318 -642C265 -521 193 -405 0 -340L0 -1C0 16 7 20 16 20Z", "x_min": 0, "x_max": 306}, "timeSig4": {"d": "M58 161L325 161L325 252C325 291 294 302 268 302C245 302 235 315 235 330C235 344 240 360 262 360L569 360C583 360 598 350 598 330C598 310 580 301 566 301C552 301 521 292 521 246L521 161L626 161C641 161 648 151 648 134C648 117 642 107 626 107L521 107L521 -202C521 -213 520 -226 504 -226C491 -226 484 -223 475 -213L338 -48C333 -40 325 -32 325 -14L325 107L131 107C246 9 477 -318 481 -334C481 -337 482 -338 482 -341C482 -353 472 -361 461 -361C448 -361 389 -359 363 -359C337 -359 272 -361 261 -361C248 -361 228 -357 228 -334C228 -156 86 45 43 105L35 117C35 118 33 120 33 121C30 127 29 132 29 137C29 151 40 161 58 161Z", "x_min": 20, "x_max": 450}, "timeSig6": {"d": "M29 -4L29 1C30 68 42 143 73 200C132 307 203 359 324 359C389 359 461 348 513 307C563 266 596 202 596 137C596 24 490 -72 379 -72C333 -72 285 -55 248 -22C245 -19 242 -19 239 -19C230 -19 226 -30 226 -53C230 -320 315 -327 346 -327C374 -327 393 -320 393 -305C393 -285 366 -268 357 -251C350 -238 347 -223 347 -209C347 -187 354 -166 369 -150C379 -131 420 -120 439 -120C500 -120 554 -167 554 -229C554 -235 554 -239 553 -245C539 -337 426 -361 348 -361C239 -360 137 -307 85 -209C53 -148 29 -72 29 -4ZM320 -3C366 -3 405 69 405 158C405 248 366 320 320 320C274 320 236 248 236 158C236 69 274 -3 320 -3Z", "x_min": 20, "x_max": 414}, "timeSig8": {"d": "M29 190C29 315 158 373 301 373C445 373 599 311 599 117C599 30 549 -17 481 -52C533 -85 567 -132 567 -204C567 -351 356 -373 317 -373C150 -373 36 -297 36 -176C36 -76 92 -23 161 16C86 52 29 99 29 190ZM111 183C111 125 161 72 225 48C330 94 436 124 436 219C436 276 392 325 295 325C199 325 111 276 111 183ZM314 -331C360 -331 482 -308 482 -207C482 -150 454 -112 406 -85C291 -125 168 -150 168 -240C168 -301 251 -331 314 -331Z", "x_min": 20, "x_max": 416}};
@@ -514,7 +576,7 @@ function shapeFor(n) {
 /* ---------- settings ---------- */
 const DEF = { n: 5, minor: false, chords: { 1: false, 2: false, 3: true, 5: false, 6: false }, sevii: false, sevV: false, sevvii: false,
               vii7q: 'hd7', inv6: false, cad64: false, inv7: false, sec: false, cad: { auth: true, half: true, dec: false, plag: false },
-              maxAcc: 4, bpm: 60, rn: true, lock: false, open: true };
+              maxAcc: 4, bpm: 60, rn: true, lock: false, mode: 'practice', open: true };
 const S = {
   set: JSON.parse(JSON.stringify(DEF)),
   prog: null, ans: [], sel: { i: 1, v: 'S' }, checked: null, view: 'mine', plays: 0, playCol: null, lastF: null,
@@ -543,6 +605,7 @@ function encode(s) {
   const iv = (s.inv6 ? '6' : '') + (s.cad64 ? 'c' : '') + (s.inv7 ? '7' : ''); if (iv) p.push('i' + iv);
   if (s.sec) p.push('x');
   p.push('e' + CADK.filter(k => s.cad[k]).map(k => k[0]).join(''), 'k' + s.maxAcc, 't' + s.bpm, 'r' + (s.rn ? 1 : 0));
+  p.push('o' + s.mode[0]);
   if (s.lock) p.push('L');
   return 'hd-' + p.join('-');
 }
@@ -567,6 +630,7 @@ function decode(h) {
     else if (a === 't') s.bpm = Math.max(40, Math.min(120, +v || 60));
     else if (a === 'r') s.rn = v !== '0';
     else if (x === 'L') s.lock = true;
+    else if (a === 'o') s.mode = { p: 'practice', c: 'challenge', a: 'ap' }[v] || 'practice';
   }
   if (!CADK.some(k => s.cad[k])) s.cad.auth = true;
   return s;
@@ -598,6 +662,7 @@ function newProgression() {
   S.prog = { ...g, cols: shape.map(c => ({ ...c, on: c.m * 4 + c.b, dur: c.d === 'w' ? 4 : 2 })), meas: shape[shape.length - 1].m + 1 };
   S.ans = g.prog.map(() => ({ S: null, B: null, R: null }));
   S.sel = { i: 1, v: 'S' }; S.checked = null; S.view = 'mine'; S.plays = 0; ghost = null;
+  apReset();
   $('#result').hidden = true; $('#reveal').disabled = true; $('#reveal').textContent = 'Show answer';
   setStatus('');
   renderAll();
@@ -791,6 +856,7 @@ function renderSetup() {
     $('#shareNote').textContent = 'Students who open this link get these settings.';
     $('#linkText').hidden = false; $('#linkText').textContent = location.href.split('#')[0] + '#' + encode(st);
   }
+  renderModes();
   // summary line
   const chords = N.filter((t, d) => d === 0 || d === 4 || st.chords[d]).join(' ');
   const parts = [`${st.n} chords`, st.minor ? 'Minor' : 'Major', chords];
@@ -800,13 +866,26 @@ function renderSetup() {
   parts.push(inv.length ? inv.join(', ') : 'Root position');
   if (st.sec) parts.push('V/x');
   if (st.rn) parts.push('Numerals');
-  $('#sumLine').textContent = parts.join(' · ');
-  $('#lockSum').textContent = 'Your teacher chose these settings: ' + parts.join(' · ') + '.';
+  S.summary = parts.join(' · ');
+  $('#sumLine').textContent = S.summary;
+  $('#lockSum').textContent = `Your teacher chose these settings: ${MODE_NAME[st.mode]} mode · ${S.summary}.`;
 }
+const MODE_NAME = { practice: 'Practice', challenge: 'Challenge', ap: 'AP' };
+const apWaits = n => n <= 5 ? [30, 60, 60] : [30, 60, 60, 60];
+function renderModes() {
+  document.querySelectorAll('.md').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === S.set.mode));
+  const k = apWaits(S.set.n).length;
+  $('#modeDesc').textContent = {
+    practice: 'Notes sound as you place them. Play back your answer before you check.',
+    challenge: 'Notes are silent while you write. No playback of your answer. One check.',
+    ap: `${k === 3 ? 'Three' : 'Four'} playings for ${S.set.n} chords. A 30-second wait after the first, then 60 seconds after each of the others. Notes are silent. Scored when time runs out.`
+  }[S.set.mode];
+}
+$('#modes').onclick = e => { const b = e.target.closest('.md'); if (!b || b.dataset.mode === S.set.mode) return; S.set.mode = b.dataset.mode; changed(); };
 function changed() { saveSettings(); writeHash(); renderSetup(); newProgression(); }
 function applyLock() {
   const locked = S.set.lock && S.fromLink;
-  $('#setup').hidden = locked; $('#lockNote').hidden = !locked;
+  $('#setup').hidden = locked; $('#lockNote').hidden = !locked; $('#modes').hidden = locked;
 }
 $('#nDown').onclick = () => { S.set.n = Math.max(3, S.set.n - 1); changed(); };
 $('#nUp').onclick = () => { S.set.n = Math.min(9, S.set.n + 1); changed(); };
@@ -838,7 +917,12 @@ $('#setup').addEventListener('toggle', () => { S.set.open = $('#setup').open; sa
 function renderTools() {
   $('#keyname').textContent = S.prog.key.name;
   $('#meta').textContent = `${S.prog.chords.length} chords · ${S.prog.meas} bars`;
-  $('#plays').textContent = S.plays === 1 ? '1 play' : `${S.plays} plays`;
+  const ap = S.set.mode === 'ap', ph = S.ap.phase, n = S.prog.chords.length;
+  $('#plays').textContent = ap ? '' : S.plays === 1 ? '1 play' : `${S.plays} plays`;
+  $('#playProg span').textContent = ap ? (ph === 'ready' ? 'Start' : ph === 'done' ? 'Finished' : 'Running') : (nowPlaying === 'prog' ? 'Stop' : 'Play progression');
+  $('#playProg').disabled = ap && ph !== 'ready';
+  $('#hearKey').disabled = ap && (ph === 'playing' || ph === 'wait');
+  $('#playMine').hidden = S.set.mode !== 'practice' && !S.checked;
   const locked = !!S.checked;
   $('#vS').setAttribute('aria-pressed', !!S.sel && S.sel.v === 'S'); $('#vB').setAttribute('aria-pressed', !!S.sel && S.sel.v === 'B');
   $('#vR').setAttribute('aria-pressed', !!S.sel && S.sel.v === 'R'); $('#vR').hidden = !S.set.rn;
@@ -855,10 +939,13 @@ function renderTools() {
     b.setAttribute('aria-pressed', !!a && a.alt === v && a.alt !== keyAlter(S.prog.f, letterOf(a.D)));
   });
   ['#vS', '#vB', '#vR', '#clear'].forEach(id => $(id).disabled = locked);
-  $('#check').disabled = locked;
+  $('#check').textContent = ap && !locked ? 'Submit now' : 'Check';
+  $('#check').disabled = locked || (ap && ph !== 'playing' && ph !== 'wait');
+  renderAP();
 }
 function renderStats() {
   const st = S.stats;
+  $('#shareBtn').disabled = !HIST.length;
   $('#stats').textContent = st.n ? `This session: ${st.n} progression${st.n > 1 ? 's' : ''} checked, ${st.perfect} perfect, ${st.ok} of ${st.tot} answers right.` : 'This session: no progressions checked yet.';
 }
 function renderAll() { renderStaff(); renderTools(); renderStats(); }
@@ -903,6 +990,7 @@ function target(p) {
   return { i, v, D };
 }
 function preview(n) {
+  if (S.set.mode !== 'practice' && !S.checked) return;       // silent entry in Challenge and AP
   ensureSound();
   if (nowPlaying) return;
   const c = ac(); if (!master) { master = c.createGain(); master.gain.value = 0.9; master.connect(c.destination); }
@@ -952,6 +1040,7 @@ $('#vB').onclick = () => voiceSel('B');
 document.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => setAcc(+b.dataset.acc));
 $('#clear').onclick = () => { if (S.checked) return; S.ans = S.ans.map(() => ({ S: null, B: null, R: null })); S.sel = { i: 1, v: 'S' }; setStatus(''); renderAll(); };
 document.addEventListener('keydown', e => {
+  if ($('#report').open) return;
   if (e.target.closest && e.target.closest('input,select,textarea,summary')) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key;
@@ -970,16 +1059,19 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------- checking ---------- */
-function check() {
+function check(auto = false) {
+  if (S.checked) return;
+  if (S.set.mode === 'ap' && auto !== true) { apFinish(); return; }
   const p = S.prog, n = p.chords.length;
   const missing = [];
   const parts = S.set.rn ? ['S', 'B', 'R'] : ['S', 'B'];
   for (let i = 1; i < n; i++) for (const k of parts) if (!S.ans[i][k]) missing.push(`chord ${i + 1} ${k === 'R' ? 'numeral' : VOICE[k].name}`);
-  if (missing.length) { setStatus(`Still empty: ${missing.join(', ')}.`, true); return; }
+  if (missing.length && auto !== true) { setStatus(`Still empty: ${missing.join(', ')}.`, true); return; }
   let sop = 0, bass = 0, rnc = 0;
   const notes = [], right = p.chords.map(() => ({}));
   for (let i = 1; i < n; i++) for (const k of ['S', 'B']) {
     const u = S.ans[i][k], A = voiced(i, k);
+    if (!u) { right[i][k] = false; notes.push(`Chord ${i + 1} ${VOICE[k].name}: left blank. The answer is ${k === 'S' ? nameOf(A.D, A.alt) : pcName(A.D, A.alt)}.`); continue; }
     const sameLetter = letterOf(u.D) === letterOf(A.D), sameAlt = u.alt === A.alt;
     const ok = k === 'S' ? u.D === A.D && sameAlt : sameLetter && sameAlt;      // the bass counts in any octave
     right[i][k] = ok;
@@ -991,7 +1083,9 @@ function check() {
     notes.push(`Chord ${i + 1} ${VOICE[k].name}: you wrote ${yours}. The answer is ${ans}.${why}`);
   }
   if (S.set.rn) for (let i = 1; i < n; i++) {
-    const u = userChord(S.ans[i].R), a = p.chords[i], ok = rnKey(u) === rnKey(a);
+    const a = p.chords[i];
+    if (!S.ans[i].R) { right[i].R = false; notes.push(`Chord ${i + 1} numeral: left blank. The answer is ${rnText(a)}.`); continue; }
+    const u = userChord(S.ans[i].R), ok = rnKey(u) === rnKey(a);
     right[i].R = ok;
     if (ok) { rnc++; continue; }
     const sameChord = rnKey(u).split('|')[0] === rnKey(a).split('|')[0];
@@ -1000,6 +1094,10 @@ function check() {
   const tot = parts.length * (n - 1), ok = sop + bass + rnc;
   S.checked = { sop, bass, right }; S.sel = null; ghost = null;
   S.stats.n++; S.stats.tot += tot; S.stats.ok += ok; if (ok === tot) S.stats.perfect++;
+  const missed = [];
+  for (let i = 1; i < n; i++) if (parts.some(k => !right[i][k])) missed.push(rnText(p.chords[i]));
+  HIST.push({ mode: S.set.mode, key: p.key.name, n, plays: S.plays, sop, bass, rn: S.set.rn ? rnc : null, per: n - 1, ok, tot, missed, set: S.summary });
+  saveHist();
   const unit = S.set.rn ? 'answers' : 'notes';
   $('#sBig').textContent = ok === tot ? `All ${tot} ${unit} right` : `${ok} of ${tot} ${unit} right`;
   $('#sSop').textContent = `Soprano ${sop}/${n - 1}`;
@@ -1011,7 +1109,7 @@ function check() {
   setStatus('');
   renderAll();
 }
-$('#check').onclick = check;
+$('#check').onclick = () => check(false);
 $('#reveal').onclick = () => {
   S.view = S.view === 'answer' ? 'mine' : 'answer';
   $('#reveal').textContent = S.view === 'answer' ? 'Show my answer' : 'Show answer';
@@ -1075,12 +1173,12 @@ function tone(bus, t, midi, dur, vol = 0.2) {
 }
 function at(sec, fn) { timers.push(setTimeout(fn, Math.max(0, sec * 1000))); }
 function setPlayLabels() {
-  $('#playProg span').textContent = nowPlaying === 'prog' ? 'Stop' : 'Play progression';
+  if (S.set.mode !== 'ap') $('#playProg span').textContent = nowPlaying === 'prog' ? 'Stop' : 'Play progression';
   $('#playMine').textContent = nowPlaying === 'mine' ? 'Stop' : 'Play my answer';
   $('#playAns').textContent = nowPlaying === 'ans' ? 'Stop' : 'Play answer';
 }
 // list: per chord, the MIDI notes to sound, lowest first
-function playChords(list, which) {
+function playChords(list, which, onDone) {
   if (nowPlaying === which && master) { stopAudio(); return; }
   const bus = newBus(), c = AC, q = 60 / S.set.bpm, t0 = c.currentTime + 0.12;
   let end = t0;
@@ -1091,10 +1189,11 @@ function playChords(list, which) {
     at(t - c.currentTime, () => { S.playCol = i; renderStaff(); });
   });
   nowPlaying = which; setPlayLabels();
-  at(end - c.currentTime + 0.1, () => { nowPlaying = null; S.playCol = null; renderStaff(); setPlayLabels(); });
+  at(end - c.currentTime + 0.1, () => { nowPlaying = null; S.playCol = null; renderStaff(); setPlayLabels(); if (onDone) onDone(); });
 }
 const withSound = fn => () => { ac(); if (nowPlaying) { fn(); return; } ensureSound().then(fn); };
 $('#playProg').onclick = withSound(() => {
+  if (S.set.mode === 'ap') { if (S.ap.phase === 'ready') apPlay(); return; }
   if (nowPlaying !== 'prog') { S.plays++; renderTools(); }
   playChords(S.prog.midi, 'prog');
 });
@@ -1114,6 +1213,183 @@ $('#hearKey').onclick = withSound(() => {
   [pm(t0D - 7), ...deg].forEach(m => tone(bus, t + 1.5, m, 1.4, 0.15));
   nowPlaying = 'key'; at(3.0, () => { nowPlaying = null; });
 });
+
+/* ---------- AP mode: timed playings ---------- */
+let apTick = null;
+S.ap = { phase: 'ready', round: 0, endAt: 0, total: 0 };
+function apReset() { clearInterval(apTick); apTick = null; S.ap = { phase: 'ready', round: 0, endAt: 0, total: 0 }; }
+function apPlay() {
+  clearInterval(apTick); apTick = null;
+  S.ap.phase = 'playing'; S.ap.round++; S.plays++;
+  renderTools();
+  playChords(S.prog.midi, 'ap', () => {
+    if (S.set.mode !== 'ap' || S.ap.phase !== 'playing') return;
+    S.ap.phase = 'wait'; S.ap.total = apWaits(S.prog.chords.length)[S.ap.round - 1];
+    S.ap.endAt = performance.now() + S.ap.total * 1000;
+    apTick = setInterval(apStep, 200);
+    renderTools();
+  });
+}
+function apStep() {
+  if (S.ap.endAt - performance.now() > 0) { renderAP(); return; }
+  clearInterval(apTick); apTick = null;
+  if (S.ap.round < apWaits(S.prog.chords.length).length) apPlay(); else apFinish();
+}
+function apFinish() {
+  clearInterval(apTick); apTick = null;
+  if (nowPlaying === 'ap') stopAudio();
+  S.ap.phase = 'done';
+  check(true);
+}
+function renderAP() {
+  const bar = $('#apBar'), ap = S.ap, waits = apWaits(S.prog.chords.length), k = waits.length;
+  bar.hidden = S.set.mode !== 'ap';
+  if (bar.hidden) return;
+  const left = ap.phase === 'wait' ? Math.max(0, (ap.endAt - performance.now()) / 1000) : ap.phase === 'ready' ? waits[0] : 0;
+  const secs = Math.ceil(left);
+  $('#apTime').textContent = ap.phase === 'playing' ? '♪' : `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+  $('#apPhase').textContent = {
+    ready: 'Press Start for the first playing.',
+    playing: `Playing ${ap.round} of ${k}`,
+    wait: ap.round < k ? `${['Second', 'Third', 'Fourth'][ap.round - 1]} playing in` : 'Time left',
+    done: 'Time is up. Your answer is scored.'
+  }[ap.phase];
+  $('#apFill').style.width = ap.phase === 'wait' ? `${100 * left / ap.total}%` : ap.phase === 'ready' ? '100%' : '0%';
+  bar.classList.toggle('low', ap.phase === 'wait' && left <= 10);
+  const dots = $('#apRounds');
+  if (dots.children.length !== k) dots.innerHTML = '<i></i>'.repeat(k);
+  [...dots.children].forEach((d, i) => d.className = i < ap.round - (ap.phase === 'playing' ? 1 : 0) ? 'done' : i === ap.round - 1 && ap.phase === 'playing' ? 'now' : '');
+}
+
+/* ---------- score report ---------- */
+let HIST = [];
+try { HIST = JSON.parse(sessionStorage.getItem('harmonic.history') || '[]'); } catch (e) {}
+function saveHist() { try { sessionStorage.setItem('harmonic.history', JSON.stringify(HIST)); } catch (e) {} }
+if (HIST.length) {
+  S.stats = { n: HIST.length, perfect: HIST.filter(h => h.ok === h.tot).length, ok: HIST.reduce((a, h) => a + h.ok, 0), tot: HIST.reduce((a, h) => a + h.tot, 0) };
+}
+const ROWS = 12;
+const pctOf = (a, b) => b ? Math.round(100 * a / b) + '%' : '—';
+function reportData() {
+  const sum = f => HIST.reduce((a, h) => a + f(h), 0);
+  const rnRows = HIST.filter(h => h.rn !== null);
+  const miss = {};
+  HIST.forEach(h => h.missed.forEach(m => miss[m] = (miss[m] || 0) + 1));
+  const start = Math.max(0, HIST.length - ROWS);
+  let name = ''; try { name = (localStorage.getItem('harmonic.name') || '').trim(); } catch (e) {}
+  name = ($('#stuName').value || name).trim();
+  return {
+    name, when: new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
+    rows: HIST.slice(start).map((h, j) => ({ i: start + j + 1, ...h })), hidden: start, count: HIST.length,
+    modes: [...new Set(HIST.map(h => MODE_NAME[h.mode]))].join(', '),
+    sets: [...new Set(HIST.map(h => h.set))],
+    overall: `${sum(h => h.ok)}/${sum(h => h.tot)}`, percent: pctOf(sum(h => h.ok), sum(h => h.tot)),
+    sop: pctOf(sum(h => h.sop), sum(h => h.per)), bass: pctOf(sum(h => h.bass), sum(h => h.per)),
+    rn: rnRows.length ? pctOf(rnRows.reduce((a, h) => a + h.rn, 0), rnRows.reduce((a, h) => a + h.per, 0)) : null,
+    perfect: HIST.filter(h => h.ok === h.tot).length,
+    missed: Object.entries(miss).sort((a, b) => b[1] - a[1]).slice(0, 4)
+  };
+}
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function openReport() {
+  const d = reportData();
+  $('#stuName').value = d.name;
+  const tiles = [['Overall', d.overall], ['Correct', d.percent], ['Soprano', d.sop], ['Bass', d.bass]];
+  if (d.rn) tiles.push(['Numerals', d.rn]);
+  $('#reportCard').innerHTML = `
+    <div>
+      <h2 id="reportTitle">Harmonic Dictation score</h2>
+      <p class="report-sub">${d.when} · ${d.count} progression${d.count > 1 ? 's' : ''} · ${d.perfect} perfect · ${esc(d.modes)} mode</p>
+    </div>
+    <p class="report-more">Settings: ${d.sets.map(esc).join('<br>Settings: ')}</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>#</th><th>Mode</th><th>Key</th><th class="num">Chords</th><th class="num">Plays</th><th class="num">Soprano</th><th class="num">Bass</th><th class="num">Numerals</th><th class="num">Score</th></tr></thead>
+      <tbody>${d.rows.map(r => `<tr><td>${r.i}</td><td>${MODE_NAME[r.mode]}</td><td>${esc(r.key)}</td><td class="num">${r.n}</td><td class="num">${r.plays}</td><td class="num">${r.sop}/${r.per}</td><td class="num">${r.bass}/${r.per}</td><td class="num">${r.rn === null ? '—' : r.rn + '/' + r.per}</td><td class="num">${r.ok}/${r.tot} · ${pctOf(r.ok, r.tot)}</td></tr>`).join('')}</tbody>
+    </table></div>
+    ${d.hidden ? `<p class="report-more">Showing the last ${ROWS} of ${d.count} progressions. Totals include all of them.</p>` : ''}
+    <dl class="report-totals">${tiles.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    ${d.missed.length ? `<p class="report-more">Chords missed most often: ${d.missed.map(([c, k]) => `${esc(c)} (${k})`).join(', ')}.</p>` : ''}`;
+  $('#saveMsg').hidden = true;
+  $('#report').showModal();
+}
+$('#stuName').addEventListener('input', () => { try { localStorage.setItem('harmonic.name', $('#stuName').value); } catch (e) {} });
+
+// Draws the report on a canvas in fixed light colors, so the image looks the same in any theme.
+function reportCanvas(d) {
+  const Wc = 800, pad = 32, rowH = 32, scale = 2;
+  const wrap = (g, text, maxW) => { const out = []; let line = ''; for (const w of text.split(' ')) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); return out; };
+  const probe = document.createElement('canvas').getContext('2d');
+  probe.font = '15px "Alegreya Sans", system-ui, sans-serif';
+  const setLines = d.sets.flatMap(s => wrap(probe, 'Settings: ' + s, Wc - 2 * pad));
+  const missLine = d.missed.length ? 'Chords missed most often: ' + d.missed.map(([c, k]) => `${c} (${k})`).join(', ') + '.' : '';
+  const H = 136 + (d.name ? 30 : 0) + setLines.length * 22 + 30 + rowH * (d.rows.length + 1) + (d.hidden ? 28 : 0) + 124 + (missLine ? 30 : 0) - 24;
+  const c = document.createElement('canvas');
+  c.width = Wc * scale; c.height = H * scale;
+  const g = c.getContext('2d'); g.scale(scale, scale);
+  const ink = '#152030', muted = '#5A6576', line = '#D5DBE3', soft = '#E3E9FF', accent = '#2B4FD8';
+  const disp = s => `700 ${s}px Alegreya, Georgia, serif`, body = s => `${s}px "Alegreya Sans", system-ui, sans-serif`;
+  g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, Wc, H);
+  g.fillStyle = accent; g.fillRect(0, 0, Wc, 6);
+  let y = 52;
+  g.fillStyle = ink; g.font = disp(28); g.fillText('Harmonic Dictation score', pad, y);
+  if (d.name) { y += 32; g.font = disp(22); g.fillText(d.name, pad, y); }
+  y += 28; g.fillStyle = muted; g.font = body(16);
+  g.fillText(`${d.when} · ${d.count} progression${d.count > 1 ? 's' : ''} · ${d.perfect} perfect · ${d.modes} mode`, pad, y);
+  g.font = body(15); setLines.forEach(t => { y += 22; g.fillText(t, pad, y); });
+  y += 36;
+  const cols = [[pad, '#', 'l'], [pad + 34, 'MODE', 'l'], [pad + 124, 'KEY', 'l'], [pad + 280, 'CHORDS', 'r'], [pad + 345, 'PLAYS', 'r'], [pad + 430, 'SOPRANO', 'r'], [pad + 495, 'BASS', 'r'], [pad + 580, 'NUMERALS', 'r'], [Wc - pad, 'SCORE', 'r']];
+  g.font = body(12); g.fillStyle = muted;
+  cols.forEach(([x, h, a]) => { g.textAlign = a === 'r' ? 'right' : 'left'; g.fillText(h, x, y); });
+  const rule = yy => { g.fillStyle = line; g.fillRect(pad, yy, Wc - 2 * pad, 1); };
+  rule(y + 10); y += 10;
+  g.font = body(16);
+  d.rows.forEach(r => {
+    y += rowH; g.fillStyle = ink;
+    const vals = [r.i, MODE_NAME[r.mode], r.key, r.n, r.plays, `${r.sop}/${r.per}`, `${r.bass}/${r.per}`, r.rn === null ? '—' : `${r.rn}/${r.per}`, `${r.ok}/${r.tot} · ${pctOf(r.ok, r.tot)}`];
+    cols.forEach(([x, , a], k) => { g.textAlign = a === 'r' ? 'right' : 'left'; g.fillText(String(vals[k]), x, y - 10); });
+    rule(y);
+  });
+  g.textAlign = 'left';
+  if (d.hidden) { y += 26; g.fillStyle = muted; g.font = body(14); g.fillText(`Showing the last ${ROWS} of ${d.count} progressions. Totals include all of them.`, pad, y); }
+  y += 22;
+  const tiles = [['OVERALL', d.overall], ['CORRECT', d.percent], ['SOPRANO', d.sop], ['BASS', d.bass]];
+  if (d.rn) tiles.push(['NUMERALS', d.rn]);
+  const bw = (Wc - 2 * pad - 10 * (tiles.length - 1)) / tiles.length;
+  tiles.forEach(([k, v], j) => {
+    const x = pad + j * (bw + 10);
+    g.fillStyle = soft; g.beginPath();
+    if (g.roundRect) g.roundRect(x, y, bw, 78, 8); else g.rect(x, y, bw, 78);
+    g.fill();
+    g.fillStyle = muted; g.font = body(11); g.fillText(k, x + 12, y + 24);
+    g.fillStyle = ink; g.font = disp(String(v).length > 7 ? 20 : 26); g.fillText(String(v), x + 12, y + 60);
+  });
+  y += 78;
+  if (missLine) { y += 30; g.fillStyle = muted; g.font = body(15); g.fillText(missLine, pad, y); }
+  return c;
+}
+async function saveImage() {
+  const d = reportData();
+  try { await document.fonts.ready; } catch (e) {}
+  const blob = await new Promise(r => reportCanvas(d).toBlob(r, 'image/png'));
+  const who = d.name ? d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' : '';
+  const name = `harmonic-dictation-${who}${new Date().toISOString().slice(0, 10)}.png`;
+  const file = new File([blob], name, { type: 'image/png' });
+  const touch = window.matchMedia('(pointer: coarse)').matches;
+  try {
+    if (touch && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Harmonic Dictation score' }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  $('#saveMsg').textContent = `Saved ${name}. If nothing downloaded, take a screenshot instead.`;
+  $('#saveMsg').hidden = false;
+}
+$('#shareBtn').onclick = openReport;
+$('#closeReport').onclick = () => $('#report').close();
+$('#saveImage').onclick = saveImage;
+$('#report').addEventListener('click', e => { if (e.target === $('#report')) $('#report').close(); });
 
 {
   const s = decode(location.hash);
